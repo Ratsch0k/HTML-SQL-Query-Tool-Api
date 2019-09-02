@@ -1,0 +1,29 @@
+{
+  "port": 4000,
+  "pg": {
+    "user": "pi",
+    "host": "192.168.2.100",
+    "database": "pg_tool",
+    "password": "I3,5JwimBiIhb.",
+    "port": 5432
+  },
+  "cryptoConfig": {
+    "hashAlgorithms": [
+        {
+          "name": "sha3-256",
+          "bytes": 32,
+          "priority": 0
+        },
+        {
+          "name": "sha512",
+          "bytes": 64,
+          "priority": 1
+        },
+        {
+          "name": "sha256",
+          "bytes": 32,
+          "priority": 2
+      }
+    ]
+  }
+}

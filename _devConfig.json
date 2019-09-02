@@ -1,0 +1,29 @@
+{
+  "port": 4000,
+  "pg": {
+    "user": "api",
+    "host": "127.0.0.1",
+    "database": "local_test",
+    "password": "12345678",
+    "port": 5432
+  },
+  "cryptoConfig": {
+    "hashAlgorithms": [
+      {
+        "name": "sha3-256",
+        "bytes": 32,
+        "priority": 0
+      },
+      {
+        "name": "sha512",
+        "bytes": 64,
+        "priority": 1
+      },
+      {
+        "name": "sha256",
+        "bytes": 32,
+        "priority": 2
+      }
+    ]
+  }
+}
