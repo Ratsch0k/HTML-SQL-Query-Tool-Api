@@ -1,4 +1,7 @@
 const {cryptoConfig} = require("./config");
+const bcrypt = require("bcrypt");
+
+const SALT_ROUNDS = 10;
 
 let crypto;
 // Check if crypto module is available, if not exit program
@@ -63,30 +66,24 @@ const log = (msg) => {
 };
 
 // Hashes a given password with the given salt as prefix
-const hashPasswordWithSalt = (salt, password) => {
-    let hash = crypto.createHash(hashAlgoName);
-    hash.update(salt + password);
-    return hash.digest().toString();
+const hashPasswordWithSalt = (password) => {
+    return bcrypt.hash(password, SALT_ROUNDS);
 };
 
 // Creates a salt with the given amount of bytes, returns a string containing the salt in utf8 encoding
-const createSalt = (bytes) => {
-    return crypto.randomBytes(bytes).toString();
+const generateSalt = () => {
+    return bcrypt.genSalt(SALT_ROUNDS);
 };
 
-/*
- * Creates a cryptographically secure salt (as long as output of hash algorithm) and hashes the password with it
- * Return an object containing the used salt and the hashed password
- */
-const createPasswordHashSaltPair = (password) => {
-    let salt = createSalt(hashAlgoSize);
-
-    let hashedPassword = hashPasswordWithSalt(salt, password);
-    return {salt: salt, hashedPassword: hashedPassword};
+const verifyPassword = (toTestPassword, databasePassword) => {
+    return bcrypt.compare(toTestPassword, databasePassword).catch(err => {
+        log(err.message);
+    })
 };
+
 
 module.exports = {
     log,
     hashPasswordWithSalt,
-    createPasswordHashSaltPair
+    verifyPassword
 };

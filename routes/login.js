@@ -1,6 +1,8 @@
 const express = require("express");
 const router = express.Router();
-const {log, hashPassword} = require("../util");
+const {log, hashPassword, verifyPassword} = require("../util");
+const db = require("../dbQueries");
+const jwt = require("jsonwebtoken");
 
 
 /* POST request for login route */
@@ -33,9 +35,17 @@ function parseAuthorizationHeader(headerString){
 
 function authTypeBasic(req, res, token){
     let {username, password} = parseToken(token)
-    let {salt, hashedPassword} = hashPassword(password);
-
-    res.send(`Username: ${username}, Password: ${password}, HashedPassword: ${hashedPassword}, Salt: ${salt.toString()}`);
+    db.getUserPasswordAndSalt(username).then(storedPassword => {
+       return verifyPassword(password, storedPassword);
+    }).then(verified => {
+        if(verified){
+            log(`IP ${req.ip} successfully logged in as ${username}`);
+            res.send(`Successfully logged in. Welcome ${username}`);
+        } else {
+            log(`IP ${req.ip} failed login as ${username}`);
+            res.status(403).send(`Wrong Username or Password. Please try again`);
+        }
+    });
 }
 
 // Parses a base64 encoded authorization token

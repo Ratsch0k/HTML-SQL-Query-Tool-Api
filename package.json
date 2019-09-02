@@ -1,5 +1,5 @@
 {
-  "name": "sql-query-tool-api",
+  "name": "HTML-SQL-Query-Tool-Api",
   "version": "1.0.0",
   "description": "Backend for the website sql-query-tool",
   "main": "index.js",
@@ -10,8 +10,10 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "bcrypt": "^3.0.6",
     "cors": "^2.8.5",
     "express": "^4.17.0",
+    "jsonwebtoken": "^8.5.1",
     "pg": "^7.11.0"
   },
   "devDependencies": {}
