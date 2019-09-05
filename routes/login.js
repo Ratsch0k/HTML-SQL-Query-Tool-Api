@@ -1,29 +1,52 @@
 const express = require("express");
 const router = express.Router();
-const {log, hashPassword, verifyPassword} = require("../util");
+const cookieParser = require("cookie-parser");
+const {log, verifyPassword, genUserDataJWT} = require("../util");
 const db = require("../dbQueries");
 const jwt = require("jsonwebtoken");
+const AUTHCOOKIE_TTL = 1800000;
 
 
 /* POST request for login route */
+router.use(cookieParser());
 router.post("/", function (req, res) {
     log(`${req.ip} => requested LOGIN`);
     // Check if authorization header is provided, if not send a 403 error
-    if(typeof req.headers.authorization === "undefined"){
+    if(typeof req.headers.authorization === "undefined" && typeof req.cookies.authJWT === "undefined"){
         res.status(403).send();
-        return;
-    }
-    let [tokenType, token] = parseAuthorizationHeader(req.headers.authorization);
+    }else if(typeof req.headers.authorization !== "undefined"){
+        let [tokenType, token] = parseAuthorizationHeader(req.headers.authorization);
+        authTypeBasic(req, res, token);
 
-    switch(tokenType){
-        case "Basic":
-            authTypeBasic(req, res, token);
-            break;
-        case "Bearer":
-            authTypeBearer(req, res, token);
-            break;
-        default:
-            res.send(`No acceptable token type, was: ${tokenType}`);
+    }else if(typeof  req.cookies.authJWT !== "undefined"){
+        // Decode jwt to get username
+        let decoded = jwt.decode(req.cookies.authJWT);
+        if(typeof decoded.username !== "undefined"){
+            db.getUserData(decoded.username).then(data => {
+                try{
+                    jwt.verify(req.cookies.authJWT, data.password);
+                    let userData = {
+                        username: data.username,
+                        email: data.email,
+                        admin: data.admin
+                    };
+                    res.cookie("authJWT", req.cookies.authJWT, {expires: new Date(Date.now() + AUTHCOOKIE_TTL), httpOnly: true})
+                        .json(userData);
+                } catch(err) {
+                    log(`IP${req.ip} tried to login with invalid jwt token. Error: ${err.message}`);
+                    let message;
+                    if(err instanceof jwt.TokenExpiredError){
+                        message = "Session expired. Please login";
+                    } else {
+                        message = "Invalid login";
+                    }
+
+                    res.status(403).send(message);
+                }
+            });
+        }
+    } else {
+        res.status(400).send("Not acceptable login request");
     }
 });
 
@@ -34,13 +57,26 @@ function parseAuthorizationHeader(headerString){
 }
 
 function authTypeBasic(req, res, token){
-    let {username, password} = parseToken(token)
-    db.getUserPasswordAndSalt(username).then(storedPassword => {
-       return verifyPassword(password, storedPassword);
-    }).then(verified => {
+    let {username, password} = parseToken(token);
+    db.getUserData(username).then(userData => {
+        if(userData.admin == null) userData.admin = false;
+        return verifyPassword(password, userData.password).then(res => {
+           return [res, userData];
+        });
+    }).then(([verified, userData]) => {
         if(verified){
-            log(`IP ${req.ip} successfully logged in as ${username}`);
-            res.send(`Successfully logged in. Welcome ${username}`);
+            log(`IP ${req.ip} successfully logged in as ${userData.username}`);
+            let jwt = genUserDataJWT(userData.password, userData.username, userData.email, userData.admin);
+            let data = {
+                message: `Successfully logged in. Welcome ${userData.username}`,
+                userData: {
+                    username: userData.username,
+                    email: userData.email,
+                    admin: userData.admin
+                },
+            };
+            res.cookie("authJWT", jwt, {expires: new Date(Date.now() + AUTHCOOKIE_TTL), httpOnly: true})
+                .json(data);
         } else {
             log(`IP ${req.ip} failed login as ${username}`);
             res.status(403).send(`Wrong Username or Password. Please try again`);

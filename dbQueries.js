@@ -7,8 +7,9 @@ if(process.env.NODE_ENV === "development"){
     pgConfig = require("./_devConfig");
 }
 
-const ADD_NEW_USER = "INSERT INTO users values($1, $2, $3);";
-const GET_USER_PASSWORD = "SELECT password from users where username=$1;";
+const ADD_NEW_USER = "INSERT INTO users VALUES($1, $2, $3);";
+const GET_USER_PASSWORD = "SELECT password FROM users WHERE username=$1;";
+const GET_USER_DATA = "SELECT * FROM users WHERE username=$1;";
 
 const pool = new Pool({
     user: pgConfig.pg.user.toString(),
@@ -33,7 +34,7 @@ const makePureQuery = (query) => {
  */
 const addNewUser = (email, username, hashedPassword) =>{
     return pool.query(ADD_NEW_USER, [username, email, hashedPassword]).then(res => {
-        return res;
+        return {username: username, email: email, password: hashedPassword};
     }).catch(err => {
         log("query " + err.message);
         throw err;
@@ -45,7 +46,7 @@ const addNewUser = (email, username, hashedPassword) =>{
  * Returns a promise which either contains an object with salt and hashedPassword (if query was successful), or nothing
  * (if an error occured)
  */
-const getUserPasswordAndSalt = (username) => {
+const getUserPassword = (username) => {
     return pool.query(GET_USER_PASSWORD, [username]).then(res => {
         return res.rows[0].password;
     }).catch(err => {
@@ -53,10 +54,19 @@ const getUserPasswordAndSalt = (username) => {
     });
 };
 
+const getUserData = (username) => {
+    return pool.query(GET_USER_DATA, [username]).then(res => {
+        return res.rows[0];
+    }).catch(err => {
+        log(err.message);
+    })
+};
+
 
 
 module.exports = {
     makePureQuery,
     addNewUser,
-    getUserPasswordAndSalt
+    getUserPassword,
+    getUserData
 };

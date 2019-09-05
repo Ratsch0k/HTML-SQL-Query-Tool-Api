@@ -1,12 +1,30 @@
 const dbQueries = require("./dbQueries");
-
+const jwt = require("jsonwebtoken");
 const {log} = require("./util");
-
-
+const db = require("./dbQueries");
 
 // Exported function for handling a query
 const getQueryResult = (req, res) => {
-    const now = new Date();
+    if(typeof req.cookies.authJWT === "undefined"){
+        res.status(403).send("Not authorized");
+    } else {
+        let decoded = jwt.decode(req.cookies.authJWT);
+        if (typeof decoded.username !== "undefined"){
+            db.getUserData(decoded.username).then(data => {
+                jwt.verify(req.cookies.authJWT, data.password);
+            }).catch(err => {
+                log(`IP ${req.ip} queried with insufficient permission`)
+               if(err instanceof jwt.TokenExpiredError){
+                   res.status(403).send("Your session expired");
+                } else {
+                   res.status(403).send("Not authorized");
+               }
+
+               return;
+            });
+        }
+    }
+
     const query = req.query.q;
 
     // Check if query string was attached. If not, send 400

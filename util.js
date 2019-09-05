@@ -1,5 +1,7 @@
 const {cryptoConfig} = require("./config");
 const bcrypt = require("bcrypt");
+const jwt = require("jsonwebtoken");
+const TOKEN_TTL = "1h";
 
 const SALT_ROUNDS = 10;
 
@@ -81,9 +83,22 @@ const verifyPassword = (toTestPassword, databasePassword) => {
     })
 };
 
+const genUserDataJWT = (secret, username, email, admin) => {
+    if (typeof admin === "undefined") admin = false;
+    let payload = {username: username, email: email, admin: admin};
+    let options = {
+        expiresIn: TOKEN_TTL,
+        subject: username
+    };
+    return jwt.sign(payload, secret, options)
+};
+
+
+
 
 module.exports = {
     log,
     hashPasswordWithSalt,
-    verifyPassword
+    verifyPassword,
+    genUserDataJWT
 };
