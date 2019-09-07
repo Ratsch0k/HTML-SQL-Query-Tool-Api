@@ -59,7 +59,8 @@ function parseAuthorizationHeader(headerString){
 function authTypeBasic(req, res, token){
     let {username, password} = parseToken(token);
     db.getUserData(username).then(userData => {
-        if(userData.admin == null) userData.admin = false;
+        if(typeof userData === "undefined") return [false, undefined];
+        if(typeof userData.admin === "undefined" || userData.admin == null) userData.admin = false;
         return verifyPassword(password, userData.password).then(res => {
            return [res, userData];
         });
@@ -81,6 +82,8 @@ function authTypeBasic(req, res, token){
             log(`IP ${req.ip} failed login as ${username}`);
             res.status(403).send(`Wrong Username or Password. Please try again`);
         }
+    }).catch(err => {
+        log(err.message);
     });
 }
 
